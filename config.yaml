@@ -1,0 +1,61 @@
+# Training Configuration for Sheikh-Kitty Coding AI
+
+version: 1.0
+date: "2025-11-13"
+author: Jules
+
+# 1. Model and Tokenizer
+model:
+  base_model: "distilgpt2"
+  tokenizer_path: "distilgpt2"
+  # Special tokens will be added during training script execution
+  special_tokens:
+    - "<DEBUG_INFO>"
+    - "<RETRIEVE>"
+
+# 2. Dataset Paths
+# The training script will combine these datasets into a single, mixed dataset.
+datasets:
+  python: "./data/python"
+  javascript: "./data/javascript"
+  typescript: "./data/typescript"
+  solidity: "./data/disl-solidity-deduplicated"
+
+# 3. Training Hyperparameters
+training:
+  output_dir: "./model_output"
+  num_train_epochs: 1
+  per_device_train_batch_size: 1
+  per_device_eval_batch_size: 1
+  gradient_accumulation_steps: 2  # For memory efficiency
+  learning_rate: 5.0e-5
+  weight_decay: 0.01
+  adam_beta1: 0.9
+  adam_beta2: 0.999
+  adam_epsilon: 1.0e-8
+  max_grad_norm: 1.0
+  lr_scheduler_type: "cosine"
+  warmup_steps: 100
+
+# 4. RAG (Retrieval-Augmented Generation) Configuration
+rag:
+  retriever_model: "sentence-transformers/all-MiniLM-L6-v2"
+  faiss_index_path: "./rag_index"
+  # The training script will build the index from the training datasets
+
+# 5. Checkpointing and Logging
+checkpointing:
+  save_strategy: "epoch"
+  save_total_limit: 2 # Keep the last 2 checkpoints
+
+logging:
+  log_level: "info"
+  log_file: "training.log"
+  report_to: "tensorboard" # Or "wandb", "none"
+  logging_steps: 10
+
+# 6. Execution-Guided Evaluation (Inline)
+evaluation:
+  evaluation_strategy: "epoch"
+  # The training script will include hooks for compilation and test pass rate checks.
+  # A mock sandbox will be used initially.

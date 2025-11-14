@@ -1,0 +1,85 @@
+# Model Architecture Specification for Sheikh-Kitty Coding AI
+
+version: 1.0
+date: "2025-11-13"
+author: Jules
+
+# 1. Core Model Architecture
+# Justification: An efficient transformer with a RAG architecture provides a strong balance
+# of generative power and factual grounding from a large corpus of code. A model in the
+# 2-3B parameter range is chosen as a base to ensure that the final, fine-tuned model,
+# along with the RAG components, can be quantized and deployed within an 8GB VRAM budget.
+
+architecture:
+  type: "Causal-Transformer-with-RAG"
+  base_model: "Salesforce/codegen-2B-multi"
+  parameters: "~2.7 Billion"
+
+# 2. Retrieval-Augmented Generation (RAG)
+# Justification: RAG allows the model to retrieve relevant code snippets from a curated
+# knowledge base, improving the accuracy and relevance of its generations. This is
+# particularly important for a coding assistant, as it can help the model generate
+# code that uses specific libraries or follows established patterns. A parameter-adaptive
+# retrieval mechanism will be implemented to dynamically decide when and what to retrieve.
+
+rag:
+  retriever:
+    model: "sentence-transformers/all-MiniLM-L6-v2"
+    description: "A lightweight sentence transformer to embed code snippets and search queries."
+
+  document_store:
+    type: "FAISS (Facebook AI Similarity Search)"
+    description: "An efficient in-memory vector store for fast retrieval of code snippets."
+
+  retrieval_strategy: "Parameter-adaptive"
+  retrieval_trigger_token: "<RETRIEVE>"
+
+# 3. Tokenizer and Special Tokens
+# Justification: Special tokens are required to signal the model to perform specific
+# actions, such as initiating a RAG query or providing debugging information. These tokens
+# will be added to the tokenizer's vocabulary during the fine-tuning process.
+
+tokenizer:
+  base_tokenizer: "Salesforce/codegen-2B-multi"
+  special_tokens:
+    - name: "<DEBUG_INFO>"
+      description: "A token to signal the start of a debugging block, where the model can provide insights into its reasoning."
+    - name: "<RETRIEVE>"
+      description: "A token used to trigger the RAG mechanism to retrieve relevant code snippets."
+
+# 4. Quantization for Efficient Deployment
+# Justification: To meet the strict <= 8GB VRAM requirement for local deployment, the model
+# will be quantized to a lower precision (4-bit). This significantly reduces the memory
+# footprint of the model with a minimal impact on performance.
+
+quantization:
+  method: "4-bit quantization (bitsandbytes)"
+  target_precision: "int4"
+
+# 5. Estimated Resource Consumption (Post-Quantization)
+# These are high-level estimates and will be refined during implementation and testing.
+
+estimated_resources:
+  vram:
+    language_model: "~2 GB"
+    rag_components: "~1 GB"
+    inference_overhead: "~2 GB"
+    total: "< 5 GB"
+
+  flops:
+    fine_tuning: "High (requires a capable GPU, but will be performed offline)"
+    inference: "Low (optimized for real-time performance on a consumer GPU)"
+
+# 6. Execution-Guided Training
+# Justification: To improve the functional correctness of the generated code, an
+# execution-guided training approach will be explored. This involves incorporating
+# feedback from a sandbox environment (e.g., compilation status, test results) into
+# the training loop. This is a "should" requirement and will be implemented after
+# the initial fine-tuning is complete.
+
+execution_guidance:
+  enabled: true
+  feedback_signals:
+    - "compilation_success"
+    - "unit_test_pass_rate"
+    - "static_analysis_warnings"
